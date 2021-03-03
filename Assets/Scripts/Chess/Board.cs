@@ -47,6 +47,22 @@ namespace Assets.Scripts
             GetBoxInternal(row, column).SetPiece(piece);
         }
 
+        public List<T> GetAllPiecesOfColor<T>(ChessColors color) where T:Piece
+        {
+            List<T> pieces = new List<T>();
+            for (int i = 0; i < boxes.GetLength(0); i++)
+            {
+                for (int j = 0; j < boxes.GetLength(1); j++)
+                {
+                    Piece p = boxes[i, j].GetPiece();
+                    if (p != null && p.Color == color && p is T)
+                        pieces.Add((T)p);
+                }
+                   
+            }
+            return pieces;
+        }
+
     }
 
  

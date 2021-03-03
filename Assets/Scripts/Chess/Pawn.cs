@@ -11,16 +11,16 @@ namespace Assets.Scripts.Chess
     class Pawn : Piece
     {
         private bool isFirstMovement = true;
-        private bool enPassant;
-        public bool EnPassant { get => enPassant; }
-
+        private Pawn enPassant;
+        public Pawn EnPassantPawn { get => enPassant; }
+        public bool IsFirstMovement { get => isFirstMovement; }
 
         public Pawn(ChessColors color, GameObject pieceObject)
         {
             type = Pieces.Pawn;
             this.pieceObject = pieceObject;
             this.color = color;
-            enPassant = false;
+            enPassant = null;
             isFirstMovement = true;
         }
 
@@ -56,6 +56,12 @@ namespace Assets.Scripts.Chess
                             if (frontFrontBox.GetPiece() == null && positions.Contains(frontBox))
                                 positions.Add(frontFrontBox);
                         }
+
+                        if (enPassant != null)
+                        {
+                            Box enPassantBox = BoardController.instance.ChessBoard.GetBoxInternal(enPassant.box.Row, enPassant.box.Column);
+                            positions.Add(BoardController.instance.ChessBoard.GetBoxInternal(enPassantBox.Row + 1, enPassantBox.Column));
+                        }
                     }
                     break;
                 case ChessColors.Black:
@@ -82,6 +88,11 @@ namespace Assets.Scripts.Chess
                             if (frontFrontBox.GetPiece() == null && positions.Contains(frontBox))
                                 positions.Add(frontFrontBox);
                         }
+                        if (enPassant != null)
+                        {
+                            Box enPassantBox = BoardController.instance.ChessBoard.GetBoxInternal(enPassant.box.Row, enPassant.box.Column);
+                            positions.Add(BoardController.instance.ChessBoard.GetBoxInternal(enPassantBox.Row - 1, enPassantBox.Column));
+                        }
 
                     }
                     break;
@@ -95,8 +106,13 @@ namespace Assets.Scripts.Chess
         public void AckFirstMovement()
         {
             isFirstMovement = false;
+
         }
-            
+
+        public void SetEnpassantPawn(Pawn p)
+        {
+            enPassant = p;
+        }
 
         public override void Move(Box destination)
         {

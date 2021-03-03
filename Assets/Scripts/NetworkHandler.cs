@@ -20,6 +20,8 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
     // Start is called before the first frame update
     void Start()
     {
+        Screen.SetResolution(1024,576,false);
+
         client = GetComponent<UnityClient>();
         client.MessageReceived += ManageMessages;
     }
@@ -82,6 +84,12 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
                     BoardController.instance.MovePieceFromNetwork(originColumn, originRow, targetColumn, targetRow);
 
                     break;
+                case 4:
+                    char column = reader.ReadChar();
+                    char row = reader.ReadChar();
+                    Debug.Log("Eaten: " + column + row);
+                    BoardController.instance.EatPieceFromNetwork(column, row);
+                    break;
             }
            
                
@@ -119,7 +127,20 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
             }
         }
     }
-    
-        
-    
+
+    public void SendEatenPiece(char column, char row)
+    {
+        using (DarkRiftWriter messageWriter = DarkRiftWriter.Create())
+        {
+            messageWriter.Write(column);
+            messageWriter.Write(row);
+            using (Message eatenMessage = Message.Create(4, messageWriter))
+            {
+                client.SendMessage(eatenMessage, SendMode.Reliable);
+            }
+        }
+    }
+
+
+
 }

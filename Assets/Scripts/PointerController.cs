@@ -67,7 +67,7 @@ public class PointerController : MonoBehaviour
         if (Input.GetMouseButton(0) && selectedPiece != null)
         {
 
-            if (BoardController.instance.GetBoxFromCoordinates(selectedPiece.transform.position).GetPiece().Color == NetworkHandler.instance.MyColor && BoardController.instance.IsMyTurn)
+            if ((BoardController.instance.GetBoxFromCoordinates(selectedPiece.transform.position).GetPiece().Color == NetworkHandler.instance.MyColor && BoardController.instance.IsMyTurn) || BoardController.instance.byPassTurns)
             {
                 if (trackingObject == null)
                     needToStartTracking = true;

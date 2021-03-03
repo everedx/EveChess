@@ -9,12 +9,14 @@ namespace Assets.Scripts.Chess
 {
     class Rook : Piece
     {
-
+        private bool isFirstMovement = true;
+        public bool IsFirstMovement { get => isFirstMovement; }
         public Rook(ChessColors color, GameObject pieceObject)
         {
             type = Pieces.Rook;
             this.pieceObject = pieceObject;
             this.color = color;
+            isFirstMovement = true;
         }
 
         public override List<Box> CheckPossibleMovements()
@@ -95,6 +97,12 @@ namespace Assets.Scripts.Chess
             }
 
             return positions;
+        }
+
+        public void AckFirstMovement()
+        {
+            isFirstMovement = false;
+
         }
     }
 }

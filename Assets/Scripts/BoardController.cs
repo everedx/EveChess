@@ -16,6 +16,8 @@ public class BoardController : Singleton<BoardController>
     [SerializeField] Camera cameraBlacks;
     [SerializeField] Camera cameraWhites;
 
+    public bool byPassTurns;
+    
 
     bool isMyTurn;
     Board chessBoard;
@@ -101,6 +103,7 @@ public class BoardController : Singleton<BoardController>
 
     public void MovePiece(GameObject piece, Vector3 targetLocation)
     {
+       
         int row, column;
         GetCellFromCoordinates(piece.transform.position, out row, out column);
         Box selected = chessBoard.GetBoxInternal(row, column);
@@ -109,7 +112,48 @@ public class BoardController : Singleton<BoardController>
             Box originBox = GetBoxFromCoordinates(piece.transform.position);
             Box targetBox = GetBoxFromCoordinates(targetLocation);
             if (originBox.GetPiece().Type == Pieces.Pawn)
-                ((Pawn)originBox.GetPiece()).AckFirstMovement();
+            {
+                Pawn pawn = (Pawn)originBox.GetPiece();
+                if (pawn.IsFirstMovement)
+                {
+                    if (Mathf.Abs(targetBox.Row - originBox.Row) > 1)
+                    {
+                        //check en passant
+                        Box leftBox = null;
+                        Box rightBox = null;
+                        if (targetBox.Column > 0) leftBox = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column - 1);
+                        if (targetBox.Column < 7) rightBox = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column + 1);
+                        if (leftBox != null)
+                        {
+                            Piece leftBoxPiece = leftBox.GetPiece();
+                            if (leftBoxPiece != null && leftBoxPiece is Pawn) ((Pawn)leftBoxPiece).SetEnpassantPawn(pawn);
+                        }
+                        if (rightBox != null)
+                        {
+                            Piece rightBoxPiece = rightBox.GetPiece();
+                            if (rightBoxPiece != null && rightBoxPiece is Pawn) ((Pawn)rightBoxPiece).SetEnpassantPawn(pawn);
+                        }
+
+                    }
+                    pawn.AckFirstMovement();
+                }
+            }
+            else if(originBox.GetPiece().Type == Pieces.King) 
+            {
+                King king = (King)originBox.GetPiece();
+                king.AckFirstMovement();
+
+               
+
+            }
+            else if (originBox.GetPiece().Type == Pieces.Rook)
+            {
+                Rook rook = (Rook)originBox.GetPiece();
+                rook.AckFirstMovement();
+
+
+
+            }
 
             //move happens
 
@@ -121,6 +165,55 @@ public class BoardController : Singleton<BoardController>
                 GameObject go = targetBox.GetPiece().PieceObject;
                 Destroy(go);
             }
+            else 
+            {
+                Piece originPiece = originBox.GetPiece();
+                if (originPiece is Pawn && ((Pawn)originPiece).EnPassantPawn != null)
+                {//En passant move
+                    int offset = originBox.GetPiece().Color == ChessColors.White ? -1 : 1;
+                    Box enPassantEatenBox = chessBoard.GetBoxInternal(targetBox.Row + offset, targetBox.Column);
+                    eatenPieces.Add(enPassantEatenBox.GetPiece());
+                    NetworkHandler.instance.SendEatenPiece(enPassantEatenBox.ChessColumnCoord, enPassantEatenBox.ChessRowCoord);
+                    GameObject go = enPassantEatenBox.GetPiece().PieceObject;
+                    Destroy(go);
+                }
+
+                if (originPiece is King)
+                {
+                    if (Mathf.Abs(targetBox.Column - originBox.Column) > 1)
+                    {
+                        //CASTLE
+                        if (targetBox.Column > originBox.Column) //right
+                        {
+                            Box boxOriginRook = chessBoard.GetBoxInternal(targetBox.Row, 7);
+                            Box boxTargetRook = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column - 1);
+                            Rook rook = (Rook)boxOriginRook.GetPiece();
+                            boxTargetRook.SetPiece(boxOriginRook.GetPiece());
+                            boxOriginRook.SetPiece(null);
+
+
+                            rook.PieceObject.transform.position = GetCoordinatesFromBox(boxTargetRook);
+                            NetworkHandler.instance.SendMovement(boxOriginRook.ChessColumnCoord, boxOriginRook.ChessRowCoord, boxTargetRook.ChessColumnCoord, boxTargetRook.ChessRowCoord);
+                        }
+                        else //left
+                        {
+                            Box boxOriginRook = chessBoard.GetBoxInternal(targetBox.Row, 0);
+                            Box boxTargetRook = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column + 1);
+                            Rook rook = (Rook)boxOriginRook.GetPiece();
+                            boxTargetRook.SetPiece(boxOriginRook.GetPiece());
+                            boxOriginRook.SetPiece(null);
+
+
+                            rook.PieceObject.transform.position = GetCoordinatesFromBox(boxTargetRook);
+                            NetworkHandler.instance.SendMovement(boxOriginRook.ChessColumnCoord, boxOriginRook.ChessRowCoord, boxTargetRook.ChessColumnCoord, boxTargetRook.ChessRowCoord);
+                        }
+                    }
+                }
+
+            }
+
+
+
             piece.transform.position = GetCoordinatesFromBox(targetBox);  
            
 
@@ -132,11 +225,25 @@ public class BoardController : Singleton<BoardController>
 
             //send to the oponent
             NetworkHandler.instance.SendMovement(originBox.ChessColumnCoord,originBox.ChessRowCoord,targetBox.ChessColumnCoord,targetBox.ChessRowCoord);
-            isMyTurn = false;
+            if(byPassTurns == false)
+                isMyTurn = false;
+
+            RemoveEnPassant(targetBox.GetPiece().Color);
         }
 
     }
 
+    private void RemoveEnPassant(ChessColors colorPieceMoved)
+    {
+        ChessColors colorToCheck=NetworkHandler.instance.MyColor; 
+        if (byPassTurns)
+            colorToCheck =colorPieceMoved == NetworkHandler.instance.MyColor ? NetworkHandler.instance.MyColor : NetworkHandler.instance.MyColor == ChessColors.White ? ChessColors.Black : ChessColors.White;
+        foreach (Pawn p in chessBoard.GetAllPiecesOfColor<Pawn>(colorToCheck))
+        {
+            if(p.EnPassantPawn != null)
+                 p.SetEnpassantPawn(null);
+        }
+    }
 
     public void MovePieceFromNetwork(char originColumn,char originRow,char targetColumn, char targetRow)
     {
@@ -147,8 +254,41 @@ public class BoardController : Singleton<BoardController>
         Debug.Log(piece);
         Box targetBox = chessBoard.GetBoxChessCoordinatesNet(targetColumn, targetRow);
         Debug.Log("Target: " + originBox);
+
+
+
+
+
         if (originBox.GetPiece().Type == Pieces.Pawn)
+        {
+            
+            Pawn pawn = (Pawn)originBox.GetPiece();
+            if (pawn.IsFirstMovement)
+            {
+                if (Mathf.Abs(targetBox.Row - originBox.Row) > 1)
+                {
+                    //check en passant
+                    Box leftBox = null;
+                    Box rightBox = null;
+                    if (targetBox.Column > 0) leftBox = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column - 1);
+                    if (targetBox.Column < 7) rightBox = chessBoard.GetBoxInternal(targetBox.Row, targetBox.Column + 1);
+                    if (leftBox != null)
+                    {
+                        Piece leftBoxPiece = leftBox.GetPiece();
+                        if (leftBoxPiece != null && leftBoxPiece is Pawn) ((Pawn)leftBoxPiece).SetEnpassantPawn(pawn);
+                    }
+                    if (rightBox != null)
+                    {
+                        Piece rightBoxPiece = rightBox.GetPiece();
+                        if (rightBoxPiece != null && rightBoxPiece is Pawn) ((Pawn)rightBoxPiece).SetEnpassantPawn(pawn);
+                    }
+
+                }
+                pawn.AckFirstMovement();
+            }
+            
             ((Pawn)originBox.GetPiece()).AckFirstMovement();
+        }
 
 
         // visuals
@@ -159,6 +299,9 @@ public class BoardController : Singleton<BoardController>
             GameObject go = targetBox.GetPiece().PieceObject;
             Destroy(go);
         }
+
+      
+
         piece.transform.position = GetCoordinatesFromBox(targetBox);
 
 
@@ -171,6 +314,15 @@ public class BoardController : Singleton<BoardController>
         //send to the oponent
         isMyTurn = true;
         
+
+    }
+
+    public void EatPieceFromNetwork(char column, char row)
+    {
+        Box box = chessBoard.GetBoxChessCoordinatesNet(column, row);
+        Destroy(box.GetPiece().PieceObject);
+        eatenPieces.Add(box.GetPiece());
+        box.SetPiece(null);
 
     }
 
