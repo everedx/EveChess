@@ -3,6 +3,7 @@ using Core.Utils;
 using DarkRift;
 using DarkRift.Client;
 using DarkRift.Client.Unity;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -89,6 +90,40 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
                     char row = reader.ReadChar();
                     Debug.Log("Eaten: " + column + row);
                     BoardController.instance.EatPieceFromNetwork(column, row);
+                    break;
+                case 5:
+                    GameObject timerGo;
+                    if (reader.ReadBoolean())
+                        timerGo = GameObject.Find("WhitesTimer");
+                    else
+                        timerGo = GameObject.Find("BlacksTimer");
+
+                    if (timerGo != null)
+                    {
+                        TextMeshProUGUI textComp = timerGo.GetComponent<TextMeshProUGUI>();
+                        string time = textComp.text;
+                        string[] times = time.Split(':');
+                        int seconds = int.Parse(times[1]);
+                        int minutes = int.Parse(times[0]);
+                        if (seconds > 0)
+                        {
+                            seconds--;
+                        }
+                        else
+                        {
+                            if (minutes > 0)
+                            {
+                                seconds = 59;
+                                minutes--;
+                            }
+                            else
+                            {
+                                minutes = 0;
+                                seconds = 0;
+                            }
+                        }
+                        textComp.text = minutes.ToString() + ":" + seconds.ToString();
+                    }
                     break;
             }
            
