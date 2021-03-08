@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: LiberationSans SDF Material
   m_Shader: {fileID: 4800000, guid: 68e6db2ebdc24f95958faec2be5558d6, type: 3}
-  m_ShaderKeywords: GLOW_ON UNDERLAY_ON
+  m_ShaderKeywords: GLOW_ON
   m_LightmapFlags: 1
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -51,7 +51,7 @@ Material:
     - _ColorMask: 15
     - _CullMode: 0
     - _Diffuse: 1
-    - _FaceDilate: -0.21
+    - _FaceDilate: 0.06
     - _FaceUVSpeedX: 0
     - _FaceUVSpeedY: 0
     - _GlowInner: 1
@@ -62,15 +62,15 @@ Material:
     - _LightAngle: 0
     - _MaskSoftnessX: 0
     - _MaskSoftnessY: 0
-    - _OutlineSoftness: 0.273
+    - _OutlineSoftness: 0
     - _OutlineUVSpeedX: 0
     - _OutlineUVSpeedY: 0
-    - _OutlineWidth: 0.182
+    - _OutlineWidth: 0.136
     - _PerspectiveFilter: 0.875
     - _Reflectivity: 10
     - _ScaleRatioA: 0.9
-    - _ScaleRatioB: 0.92025006
-    - _ScaleRatioC: 0.30675
+    - _ScaleRatioB: 0.67725
+    - _ScaleRatioC: 0.22575
     - _ScaleX: 1
     - _ScaleY: 1
     - _ShaderFlags: 0
@@ -113,11 +113,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}
-  m_Name: TimersBlacks
+  m_Name: LoseText
   m_EditorClassIdentifier: 
-  hashCode: 1549049184
+  hashCode: -949695640
   material: {fileID: 2180264}
-  materialHashCode: 1986192320
+  materialHashCode: -2100185912
   m_Version: 1.1.0
   m_SourceFontFileGUID: e3265ab4bf004d28a9537516768c1c75
   m_SourceFontFile_EditorRef: {fileID: 12800000, guid: e3265ab4bf004d28a9537516768c1c75, type: 3}

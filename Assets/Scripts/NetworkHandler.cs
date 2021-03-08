@@ -3,6 +3,7 @@ using Core.Utils;
 using DarkRift;
 using DarkRift.Client;
 using DarkRift.Client.Unity;
+using System.Runtime.CompilerServices;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -93,38 +94,46 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
                     break;
                 case 5:
                     GameObject timerGo;
+                    ChessColors colorTimer;
                     if (reader.ReadBoolean())
+                    {
+                        colorTimer = ChessColors.White;
                         timerGo = GameObject.Find("WhitesTimer");
+                    }
                     else
+                    {
+                        colorTimer = ChessColors.Black;
                         timerGo = GameObject.Find("BlacksTimer");
+                    }
 
                     if (timerGo != null)
                     {
                         TextMeshProUGUI textComp = timerGo.GetComponent<TextMeshProUGUI>();
-                        string time = textComp.text;
-                        string[] times = time.Split(':');
-                        int seconds = int.Parse(times[1]);
-                        int minutes = int.Parse(times[0]);
-                        if (seconds > 0)
-                        {
-                            seconds--;
-                        }
-                        else
-                        {
-                            if (minutes > 0)
-                            {
-                                seconds = 59;
-                                minutes--;
-                            }
-                            else
-                            {
-                                minutes = 0;
-                                seconds = 0;
-                            }
-                        }
-                        textComp.text = minutes.ToString() + ":" + seconds.ToString();
+                        ReduceTimer(textComp, colorTimer);
                     }
                     break;
+                case 6:
+                    char oColumn = reader.ReadChar();
+                    char oRow = reader.ReadChar();
+                    char tColumn = reader.ReadChar();
+                    char tRow = reader.ReadChar();
+                    ushort type = reader.ReadUInt16();
+
+                    BoardController.instance.ReplacePawnNetwork(oColumn, oRow, tColumn, tRow, (Pieces)type );
+                    break;
+                case 10:
+                    ChessColors winner = reader.ReadBoolean() == true ? ChessColors.White : ChessColors.Black;
+                    GameObject announcerObject;
+                    if (winner == myColor)
+                        announcerObject = GameObject.Find("CanvasGUI").transform.Find("WinText").gameObject;
+                    else
+                        announcerObject = GameObject.Find("CanvasGUI").transform.Find("LoseText").gameObject;
+
+                    if (announcerObject != null)
+                        announcerObject.SetActive(true);
+
+                    break;
+                 
             }
            
                
@@ -133,6 +142,63 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
         }
     }
 
+    private void ReduceTimer(TextMeshProUGUI textComp, ChessColors color)
+    {
+        string time = textComp.text;
+        string[] times = time.Split(':');
+        int seconds = int.Parse(times[1]);
+        int minutes = int.Parse(times[0]);
+        if (seconds > 0)
+        {
+            seconds--;
+        }
+        else
+        {
+            if (minutes > 0)
+            {
+                seconds = 59;
+                minutes--;
+            }
+            else
+            {
+                minutes = 0;
+                seconds = 0;
+                SendWinner(color ==ChessColors.White ? ChessColors.Black : ChessColors.White);
+            }
+        }
+        textComp.text = minutes.ToString() + ":" + seconds.ToString();
+    }
+
+    public void SendWinner(ChessColors color)
+    {
+        BoardController.instance.GameOver = true;
+        using (DarkRiftWriter messageWriter = DarkRiftWriter.Create())
+        {
+
+            messageWriter.Write(color == ChessColors.White ? true: false);
+            using (Message winnerMessage = Message.Create(10, messageWriter))
+            {
+                client.SendMessage(winnerMessage, SendMode.Reliable);
+            }
+        }
+    }
+
+    public void SendMoveAndReplace(char originColumn, char originRow, char targetColumn, char targetRow, Pieces piece)
+    {
+        using (DarkRiftWriter messageWriter = DarkRiftWriter.Create())
+        {
+
+            messageWriter.Write(originColumn);
+            messageWriter.Write(originRow);
+            messageWriter.Write(targetColumn);
+            messageWriter.Write(targetRow);
+            messageWriter.Write((ushort)piece);
+            using (Message moveReplaceMessage = Message.Create(6, messageWriter))
+            {
+                client.SendMessage(moveReplaceMessage, SendMode.Reliable);
+            }
+        }
+    }
 
     public void SendReadyMessage()
     {

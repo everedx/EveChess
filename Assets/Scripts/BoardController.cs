@@ -10,15 +10,18 @@ using Core.Utils;
 public class BoardController : Singleton<BoardController>
 {
     [SerializeField] PieceInfo[] chessPieces;
+    [SerializeField] List<PieceInfo> chessPiecesPrefabs;
     [SerializeField] GameObject boardModel;
     [SerializeField] Material ocuppiedBoxMat;
     [SerializeField] Material freeBoxMat;
     [SerializeField] Camera cameraBlacks;
     [SerializeField] Camera cameraWhites;
-
+    [SerializeField] GameObject eatenPiecesMenu;
     public bool byPassTurns;
-    
 
+    private bool needToChoosePiece;
+    char orX, orY, taX, taY;
+    bool gameOver;
     bool isMyTurn;
     Board chessBoard;
     Vector3 scale;
@@ -26,10 +29,14 @@ public class BoardController : Singleton<BoardController>
     private List<Piece> eatenPieces;
     public Board ChessBoard { get => chessBoard; }
     public bool IsMyTurn { get => isMyTurn; }
+    public bool GameOver { get => gameOver; set => gameOver = value; }
+    public List<Piece> EatenPieces { get => eatenPieces; }
 
     // Start is called before the first frame update
     void Start()
     {
+        needToChoosePiece = false;
+        gameOver = false;
         if (NetworkHandler.instance.MyColor == ChessColors.Black)
         {
             isMyTurn = false;
@@ -103,8 +110,8 @@ public class BoardController : Singleton<BoardController>
 
     public void MovePiece(GameObject piece, Vector3 targetLocation)
     {
-       
         int row, column;
+        needToChoosePiece = false;
         GetCellFromCoordinates(piece.transform.position, out row, out column);
         Box selected = chessBoard.GetBoxInternal(row, column);
         if (selected.GetPiece().CheckPossibleMovements().Contains(GetBoxFromCoordinates(targetLocation)))
@@ -137,6 +144,15 @@ public class BoardController : Singleton<BoardController>
                     }
                     pawn.AckFirstMovement();
                 }
+                else if (targetBox.Row == 0 || targetBox.Row == 7)
+                {
+                    if (eatenPieces.FindAll(x => x.Color == originBox.GetPiece().Color && (x is Queen || x is Bishop || x is Rook || x is Knight)).Count > 0)
+                    {
+                        eatenPiecesMenu.SetActive(true);
+                        needToChoosePiece = true;
+                    }
+                    
+                }
             }
             else if(originBox.GetPiece().Type == Pieces.King) 
             {
@@ -162,6 +178,11 @@ public class BoardController : Singleton<BoardController>
             {
                 //delete gameobject
                 eatenPieces.Add(targetBox.GetPiece());
+                if (targetBox.GetPiece() is King)
+                {
+                  
+                    NetworkHandler.instance.SendWinner(NetworkHandler.instance.MyColor);
+                }
                 GameObject go = targetBox.GetPiece().PieceObject;
                 Destroy(go);
             }
@@ -222,12 +243,24 @@ public class BoardController : Singleton<BoardController>
             originBox.SetPiece(null);
 
 
+            if (!needToChoosePiece)
+            {
+                //send to the oponent
+                NetworkHandler.instance.SendMovement(originBox.ChessColumnCoord, originBox.ChessRowCoord, targetBox.ChessColumnCoord, targetBox.ChessRowCoord);
+                if (byPassTurns == false)
+                    isMyTurn = false;
 
-            //send to the oponent
-            NetworkHandler.instance.SendMovement(originBox.ChessColumnCoord,originBox.ChessRowCoord,targetBox.ChessColumnCoord,targetBox.ChessRowCoord);
-            if(byPassTurns == false)
-                isMyTurn = false;
-
+                
+            }
+            else 
+            {
+                if (byPassTurns == false)
+                    isMyTurn = false;
+                orX = originBox.ChessColumnCoord;
+                orY = originBox.ChessRowCoord;
+                taX = targetBox.ChessColumnCoord;
+                taY = targetBox.ChessRowCoord;
+            }
             RemoveEnPassant(targetBox.GetPiece().Color);
         }
 
@@ -339,6 +372,51 @@ public class BoardController : Singleton<BoardController>
         return new Vector3(boardModel.transform.position.x + box.Column * scale.x,boardModel.transform.position.y  , boardModel.transform.position.z + box.Row * scale.z);
     }
 
+
+    public void ReplacePawn(Pieces piece)
+    {
+        Box box = chessBoard.GetBoxChessCoordinatesNet(taX,taY);
+        Destroy(box.GetPiece().PieceObject);
+        GameObject go = Instantiate(chessPiecesPrefabs.ToList().Find(x => x.color == NetworkHandler.instance.MyColor && x.type == piece).pieceObject);
+        chessBoard.AddPiece(box.Row, box.Column, PieceFactory.CreatePiece(piece, NetworkHandler.instance.MyColor, go));
+        go.transform.position = GetCoordinatesFromBox(box);
+        eatenPieces.Remove(eatenPieces.Find(x => x.Color == NetworkHandler.instance.MyColor && x.Type == piece));
+
+        //tell the other client
+        NetworkHandler.instance.SendMoveAndReplace(orX, orY, taX, taY,piece);
+        if (byPassTurns == false)
+            isMyTurn = false;
+
+        
+    }
+
+    public void ReplacePawnNetwork(char originColumn, char originRow, char targetColumn, char targetRow,Pieces piece)
+    {
+        Box originBox = chessBoard.GetBoxChessCoordinatesNet(originColumn, originRow);
+        Box targetBox = chessBoard.GetBoxChessCoordinatesNet(targetColumn, targetRow);
+        ChessColors color = originBox.GetPiece().Color;
+        GameObject destroyable = originBox.GetPiece().PieceObject;
+        Destroy(destroyable);
+        originBox.SetPiece(null);
+
+        if (targetBox.GetPiece() != null)
+        {
+            eatenPieces.Add(targetBox.GetPiece());
+            Destroy(targetBox.GetPiece().PieceObject);
+        }
+
+        GameObject go = Instantiate(chessPiecesPrefabs.ToList().Find(x => x.color == color && x.type == piece).pieceObject);
+        chessBoard.AddPiece(targetBox.Row, targetBox.Column, PieceFactory.CreatePiece(piece, color, go));
+        go.transform.position = GetCoordinatesFromBox(targetBox);
+        eatenPieces.Remove(eatenPieces.Find(x => x.Color == color && x.Type == piece));
+
+
+
+        //send to the oponent
+        isMyTurn = true;
+
+
+    }
 
 
     private void CreateMesh(Vector3 location, Material mat)
