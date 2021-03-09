@@ -13,7 +13,7 @@ public class PointerController : MonoBehaviour
 
     [SerializeField] Material selectionMatWhite;
     [SerializeField] Material selectionMatBlack;
-
+    [SerializeField] AudioSource clickSource;
     private Camera cameraUsed;
 
     private GameObject highightedPiece;
@@ -83,6 +83,7 @@ public class PointerController : MonoBehaviour
             {
                 ///Move piece!!
                 BoardController.instance.MovePiece(selectedPiece, trackingObject.transform.position);
+                clickSource.Play();
 
                 Destroy(trackingObject);
                 Debug.Log("EndTracking");
@@ -122,9 +123,12 @@ public class PointerController : MonoBehaviour
      
             if (Physics.Raycast(ray, out hit ,float.MaxValue, LayerMask.GetMask("Board")))
             {
+                Vector3 prev = trackingObject.transform.position;
                 if(hit.collider != null)
                     trackingObject.transform.position = BoardController.instance.GetCoordinatesFromBox(BoardController.instance.GetBoxFromCoordinates(hit.point));
 
+                if (prev != trackingObject.transform.position)
+                    clickSource.Play();
             }
             
         }

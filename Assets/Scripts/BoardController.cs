@@ -17,6 +17,8 @@ public class BoardController : Singleton<BoardController>
     [SerializeField] Camera cameraBlacks;
     [SerializeField] Camera cameraWhites;
     [SerializeField] GameObject eatenPiecesMenu;
+    [SerializeField] GameObject turnIndicator;
+
     public bool byPassTurns;
 
     private bool needToChoosePiece;
@@ -42,6 +44,7 @@ public class BoardController : Singleton<BoardController>
             isMyTurn = false;
             cameraWhites.gameObject.SetActive(false);
             cameraBlacks.gameObject.SetActive(true);
+            GameObject.Find("CanvasGUI").GetComponent<Canvas>().worldCamera = cameraBlacks;
         }
         else 
         {
@@ -70,6 +73,13 @@ public class BoardController : Singleton<BoardController>
     }
 
 
+    private void Update()
+    {
+        if (IsMyTurn)
+            turnIndicator.SetActive(true);
+        else
+            turnIndicator.SetActive(false);
+    }
 
     public void SelectPiece(GameObject pieceObject)
     {
