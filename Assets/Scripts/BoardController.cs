@@ -18,7 +18,9 @@ public class BoardController : Singleton<BoardController>
     [SerializeField] Camera cameraWhites;
     [SerializeField] GameObject eatenPiecesMenu;
     [SerializeField] GameObject turnIndicator;
-
+    
+    [SerializeField] TrackingHandler tracking;
+    [SerializeField] Bench whitesBench, blacksBench;
     public bool byPassTurns;
 
     private bool needToChoosePiece;
@@ -128,6 +130,9 @@ public class BoardController : Singleton<BoardController>
         {
             Box originBox = GetBoxFromCoordinates(piece.transform.position);
             Box targetBox = GetBoxFromCoordinates(targetLocation);
+
+            tracking.SetTrackingText(originBox.ChessColumnCoord.ToString() + (originBox.ChessRowCoord-'A'+1).ToString() + " -> " + targetBox.ChessColumnCoord.ToString() + (targetBox.ChessRowCoord-'A'+1).ToString(),originBox.GetPiece().Color);
+
             if (originBox.GetPiece().Type == Pieces.Pawn)
             {
                 Pawn pawn = (Pawn)originBox.GetPiece();
@@ -273,7 +278,7 @@ public class BoardController : Singleton<BoardController>
             }
             RemoveEnPassant(targetBox.GetPiece().Color);
         }
-
+        UpdateBenchs();
     }
 
     private void RemoveEnPassant(ChessColors colorPieceMoved)
@@ -290,8 +295,10 @@ public class BoardController : Singleton<BoardController>
 
     public void MovePieceFromNetwork(char originColumn,char originRow,char targetColumn, char targetRow)
     {
+        
         GameObject piece;
         Box originBox = chessBoard.GetBoxChessCoordinatesNet(originColumn, originRow);
+        tracking.SetTrackingText(originColumn.ToString() + (originRow - 'A' + 1).ToString() + " -> " + targetColumn.ToString() + (targetRow - 'A' + 1).ToString(),originBox.GetPiece().Color);
         Debug.Log("Origin: " + originBox);
         piece = originBox.GetPiece().PieceObject;
         Debug.Log(piece);
@@ -356,8 +363,8 @@ public class BoardController : Singleton<BoardController>
 
         //send to the oponent
         isMyTurn = true;
-        
 
+        UpdateBenchs();
     }
 
     public void EatPieceFromNetwork(char column, char row)
@@ -366,10 +373,14 @@ public class BoardController : Singleton<BoardController>
         Destroy(box.GetPiece().PieceObject);
         eatenPieces.Add(box.GetPiece());
         box.SetPiece(null);
-
+        UpdateBenchs();
     }
 
-
+    private void UpdateBenchs()
+    {
+        blacksBench.UpdateBench(eatenPieces);
+        whitesBench.UpdateBench(eatenPieces);
+    }
     public Box GetBoxFromCoordinates(Vector3 coordinates)
     {
         int row, col;
@@ -396,8 +407,8 @@ public class BoardController : Singleton<BoardController>
         NetworkHandler.instance.SendMoveAndReplace(orX, orY, taX, taY,piece);
         if (byPassTurns == false)
             isMyTurn = false;
+        UpdateBenchs();
 
-        
     }
 
     public void ReplacePawnNetwork(char originColumn, char originRow, char targetColumn, char targetRow,Pieces piece)
@@ -425,7 +436,7 @@ public class BoardController : Singleton<BoardController>
         //send to the oponent
         isMyTurn = true;
 
-
+        UpdateBenchs();
     }
 
 

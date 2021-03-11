@@ -13,12 +13,7 @@ public class GUIPieceSelector : MonoBehaviour, IPointerEnterHandler, IPointerExi
     Image Image;
     bool mouseIsoverMe;
     // Start is called before the first frame update
-    void Start()
-    {
-        Image = GetComponent<Image>();
-        if (BoardController.instance.EatenPieces.Find(x => x.Color == NetworkHandler.instance.MyColor && x.Type == pieceType) == null)
-            gameObject.SetActive(false);
-    }
+
 
     // Update is called once per frame
     void Update()
@@ -46,5 +41,12 @@ public class GUIPieceSelector : MonoBehaviour, IPointerEnterHandler, IPointerExi
         Debug.Log("Selected " + pieceType);
         BoardController.instance.ReplacePawn(pieceType);
         transform.parent.parent.gameObject.SetActive(false);
+    }
+
+    private void OnEnable()
+    {
+        Image = GetComponent<Image>();
+        if (BoardController.instance.EatenPieces.Find(x => x.Color == NetworkHandler.instance.MyColor && x.Type == pieceType) == null)
+            gameObject.SetActive(false);
     }
 }

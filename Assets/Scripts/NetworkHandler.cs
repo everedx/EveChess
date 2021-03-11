@@ -22,7 +22,7 @@ public class NetworkHandler : PersistentSingleton<NetworkHandler>
     // Start is called before the first frame update
     void Start()
     {
-        Screen.SetResolution(1024,576,false);
+        Screen.SetResolution(1600,900,false);
 
         client = GetComponent<UnityClient>();
         client.MessageReceived += ManageMessages;
