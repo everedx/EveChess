@@ -50,6 +50,10 @@ namespace DarkRift.Client.Unity
 		private ushort port = 4296;
 
         [SerializeField]
+        [Tooltip("The UDP port on the server the client will connect to.")]
+        private ushort udpPort = 30100;
+
+        [SerializeField]
         [Tooltip("Whether to disable Nagel's algorithm or not.")]
 #pragma warning disable IDE0044 // Add readonly modifier, Unity can't serialize readonly fields
         private bool noDelay = false;
@@ -237,7 +241,7 @@ namespace DarkRift.Client.Unity
 		{
             //If auto connect is true then connect to the server
             if (autoConnect)
-			    Connect(host, port, noDelay);
+			    Connect(host, port, 30100, noDelay);
 		}
 
         private void Update()
